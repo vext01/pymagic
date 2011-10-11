@@ -25,98 +25,96 @@ class node:
     def __str__(self):
         return "* [%s] (mime=%s)" % (self.descr, self.mime)
 
+# get next non-blank, non-comment line
+def next_useful_line(f):
+    while(True):
+        line = f.readline()
+
+        if (len(line) == 0):
+            raise EOFError
+
+        if len(line.strip()) == 0 or line.startswith("#") :
+            continue
+
+        return (line)
+
 """
 peek at the next line and attach mime info to node if present
 """
-def attach_mime(f, node, raw_lines):
+def attach_mime(f, node):
 
-    line = f.readline()
-    if len(line) == 0:
+    try:
+        line = next_useful_line(f)
+    except EOFError:
         return
 
     if (line.startswith("!:mime")):
-        flds = line.strip().split("\t")
+        flds = line.strip().split(None, 1)
         flds = [ x for x in flds if len(x) != 0 ]
         node.mime = flds[1]
-        raw_lines.append(line.strip())
     else:
         f.seek(-len(line), 1)
 
 """
 parse magic file making a tree
 """
-def parse(f, last_node, raw_lines):
+def parse(f, parent_node, limit):
 
     ignore = True
     raw_line = None
 
     # keep reading until a useful line shows up
-    while (ignore):
-        raw_line = f.readline()
-        if len(raw_line) == 0:
-            return raw_lines
+    while (True and limit > 0):
+
+        limit -= 1 #XXX
+
+        try:
+            raw_line = next_useful_line(f)
+        except EOFError:
+            return # we are done
 
         line = raw_line.strip()
+        print(line)
 
-        # blank lines/comments
-        if len(line) == 0 or line.startswith("#"):
-            continue
-        break
+        if line.startswith("!:mime"):
+            print("Unexpected mime");
+            sys.exit(1)
 
-    if line.startswith("!:mime"):
-        print("Unexpected mime");
-        sys.exit(1)
+        # get level
+        lvl = 1
+        while(line[0] == ">"):
+            lvl += 1
+            line = line[1:]
 
-    # get level
-    lvl = 1
-    while(line[0] == ">"):
-        lvl += 1
-        line = line[1:]
+        new_node = None
+        flds = line.split(None, 3)
+        flds = [ x for x in flds if len(x) != 0]
+        try:
+            new_node = node(lvl, flds[3])
+        except(IndexError):
+            new_node = node(lvl, "")
 
-    new_node = None
-    flds = line.split("\t")
-    flds = [ x for x in flds if len(x) != 0]
-    try:
-        new_node = node(lvl, flds[3])
-    except(IndexError):
-        new_node = node(lvl, "")
+        attach_mime(f, new_node)
 
-    # if we hit the next 1 level line, then end of this test
-    if last_node.parent != None and lvl == 1:
-        f.seek(-len(raw_line), 1)
-        return raw_lines
+        # XXX separate parent_node from last_node
+        if (new_node.level == parent_node.level + 1):
+            pass
+            # parent_node does not change
+        elif new_node.level == parent_node.level:
+            parent_node = parent_node.parent
+        elif new_node.level < parent_node.level:
+            for up in range (0, parent_node.level - new_node.level + 1):
+                parent_node = parent_node.parent
+        else:
+            print("should never happen")
+            print("new_lvl = %d :: parent_lvl = %d" % (new_node.level,
+                parent_node.level))
+            # XXX some bad magic causes this. Hmmm
+            sys.exit(1)
 
-    raw_lines.append(raw_line.strip())
-    attach_mime(f, new_node, raw_lines)
-
-    if (new_node.level == last_node.level):
-        last_node.parent.children.append(new_node)
-        new_node.parent = last_node.parent
-        parse(f, new_node, raw_lines)
-
-    elif new_node.level == last_node.level + 1:
-        last_node.children.append(new_node)
-        new_node.parent = last_node
-        parse(f, new_node, raw_lines)
-
-    elif new_node.level < last_node.level:
-
-        # HAESBERT PLEASE CHECK THIS LOGIC
-        new_parent = last_node
-        for up in range (0, last_node.level - new_node.level + 1):
-            new_parent = new_parent.parent
-        new_node.parent = new_parent
-
-        new_parent.children.append(new_node)
-        parse(f, new_node, raw_lines)
-
-    else:
-        print("should never happen")
-        print("new_lvl = %d :: parent_lvl = %d" % (new_node.level,
-            parent_node.level))
-        sys.exit(1)
-
-    return raw_lines
+        new_node.parent = parent_node
+        parent_node.children.append(new_node)
+        parent_node = new_node
 
 """
 TEST --------------------------------------------------------------
@@ -128,21 +126,13 @@ if (len(sys.argv) == 1):
 else:
     magic = open(sys.argv[1], "r")
 
-while(True):
-    root = node(0, "<root>")
-    raw_lines = parse(magic, root, [])
+sys.stdout.write("How many lines to parse (or hot enter for whole file: ")
+lim = raw_input()
+if len(lim.strip()) == 0:
+    lim = 99999999999
+else:
+    lim = int(lim)
 
-    if len(raw_lines) == 0:
-        sys.exit(0)
-
-    print("\nTHESE LINES:")
-    for i in raw_lines:
-        print(i)
-    print("\n")
-
-    print("BECAME:")
-    root.dump(0)
-
-    print("\nHit enter for the next root branch")
-    raw_input()
-    print("-------------------------------\n")
+root = node(0, "<root>")
+parse(magic, root, lim)
+root.dump(0)
