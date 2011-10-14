@@ -3,17 +3,24 @@
 import sys
 
 class node:
+    """ Represents a node in the n-ary tree we are building """
+
     def __init__(self, level, descr):
+        """ make a new node """
         self.children = []
-        self.level = level
+        self.level = level # -1 for root
         self.mime = None
         self.parent = None
         self.descr = descr
 
     def dump(self, level):
+        """ dump a node and it's subtree to stdout """
 
-        sys.stdout.write("%s" % ("\t" * level))
+        # indent
+        sys.stdout.write("%s" % ("    " * level))
         print(self)
+
+        # print kids
         for i in self.children:
             i.dump(level+1)
 
@@ -22,14 +29,13 @@ class node:
             print("failed sanity check")
             sys.exit(1)
 
-
-
     def __str__(self):
+        """ string representation of a single node """
         return "* [%s] (mime=%s, level=%d)" % \
                 (self.descr, self.mime, self.level)
 
-# get next non-blank, non-comment line
 def next_useful_line(f):
+    """ get next non-blank, non-comment line """
     while(True):
         line = f.readline()
 
@@ -41,11 +47,8 @@ def next_useful_line(f):
 
         return (line)
 
-"""
-peek at the next line and attach mime info to node if present
-"""
 def attach_mime(f, node):
-
+    """ peek at the next line and attach mime info to node if present """
     try:
         line = next_useful_line(f)
     except EOFError:
@@ -58,11 +61,8 @@ def attach_mime(f, node):
     else:
         f.seek(-len(line), 1)
 
-"""
-parse magic file making a tree
-"""
 def parse(f, root_node):
-
+    """ parse magic file making a tree """
     ignore = True
     raw_line = None
 
@@ -83,7 +83,7 @@ def parse(f, root_node):
             sys.exit(1)
 
         # get level
-        lvl = 1
+        lvl = 0
         while(line[0] == ">"):
             lvl += 1
             line = line[1:]
@@ -131,16 +131,13 @@ def parse(f, root_node):
         new_node.parent = insert_at
         last_node = new_node
 
-"""
-TEST --------------------------------------------------------------
-"""
+if (__name__ == "__main__"):
+    magic = None
+    if (len(sys.argv) == 1):
+        magic = open("magic", "r")
+    else:
+        magic = open(sys.argv[1], "r")
 
-magic = None
-if (len(sys.argv) == 1):
-    magic = open("magic", "r")
-else:
-    magic = open(sys.argv[1], "r")
-
-root = node(0, "<root>")
-parse(magic, root)
-root.dump(0)
+    root = node(-1, "<root>")
+    parse(magic, root)
+    root.dump(-1)
