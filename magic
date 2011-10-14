@@ -9674,15 +9674,16 @@
 0	string	#\ daub	Maple help file, old style
 #0	string	#===========	Maple help file, old style
 
-# .mws
-0	string	\000\000\001\044\000\221	Maple worksheet
-#this is anomalous
-0	string	WriteNow\000\002\000\001\000\000\000\000\100\000\000\000\000\000	Maple worksheet, but weird
-# this has the form {VERSION 2 3 "IBM INTEL NT" "2.3" }\n
-# that is {VERSION major_version miunor_version computer_type version_string}
-0	string	{VERSION\ 	Maple worksheet
->9	string	>\0	version %.1s.
->>>11	string	>\0	%.1s
+# HACKED, think there is a bug here EDD XXX:
+## .mws
+#0	string	\000\000\001\044\000\221	Maple worksheet
+##this is anomalous
+#0	string	WriteNow\000\002\000\001\000\000\000\000\100\000\000\000\000\000	Maple worksheet, but weird
+## this has the form {VERSION 2 3 "IBM INTEL NT" "2.3" }\n
+## that is {VERSION major_version miunor_version computer_type version_string}
+#0	string	{VERSION\ 	Maple worksheet
+#>9	string	>\0	version %.1s.
+#>>>11	string	>\0	%.1s
 
 # .mps
 0	string	\0\0\001$	Maple something
